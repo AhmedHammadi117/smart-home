@@ -1,0 +1,272 @@
+# Ecrit ton programme ici ;-)
+from microbit import*
+#import music
+import music
+import neopixel
+
+class LCD1602():
+    def __init__(self):
+        self.buf = bytearray(1)
+        self.BK = 0x08
+        self.RS = 0x00
+        self.E = 0x04
+        self.setcmd(0x33)
+        sleep(5)
+        self.send(0x30)
+        sleep(5)
+        self.send(0x20)
+        sleep(5)
+        self.setcmd(0x28)
+        self.setcmd(0x0C)
+        self.setcmd(0x06)
+        self.setcmd(0x01)
+        self.version = '1.0'
+
+    def setReg(self, dat):
+        self.buf[0] = dat
+        i2c.write(LCD_I2C_ADDR, self.buf)
+        sleep(1)
+
+    def send(self, dat):
+        d = dat & 0xF0
+        d |= self.BK
+        d |= self.RS
+        self.setReg(d)
+        self.setReg(d | 0x04)
+        self.setReg(d)
+
+    def setcmd(self, cmd):
+        self.RS = 0
+        self.send(cmd)
+        self.send(cmd << 4)
+
+    def setdat(self, dat):
+        self.RS = 1
+        self.send(dat)
+        self.send(dat << 4)
+
+    def clear(self):
+        self.setcmd(1)
+
+    def backlight(self, on):
+        if on:
+            self.BK = 0x80
+        else:
+            self.BK = 0
+        self.setcmd(0)
+
+    def on(self):
+        self.setcmd(0x0C)
+
+    def off(self):
+        self.setcmd(0x08)
+
+    def shl(self):
+        self.setcmd(0x18)
+
+    def shr(self):
+        self.setcmd(0x1C)
+
+    def char(self, ch, x=-1, y=0):
+        if x >= 0:
+            a = 0x80
+            if y > 0:
+                a = 0xC0
+            a += x
+            self.setcmd(a)
+        self.setdat(ch)
+
+    def puts(self, s, x=0, y=0):
+        if len(s) > 0:
+            self.char(ord(s[0]), x, y)
+            for i in range(1, len(s)):
+                self.char(ord(s[i]))
+
+class Servo:
+    def __init__(self, pin, freq=50, min_us=600, max_us=2400, angle=180):
+        self.min_us = min_us
+        self.max_us = max_us
+        self.us = 0
+        self.freq = freq
+        self.angle = angle
+        self.pin = pin
+        analog_period = round((1 / self.freq) * 1000)  # Convertir la fréquence en millisecondes
+        self.pin.set_analog_period(analog_period)
+
+    def write_us(self, us):
+        us = min(self.max_us, max(self.min_us, us))
+        duty = round(us * 1024 * self.freq // 1000000)
+        self.pin.write_analog(duty)
+        sleep(100)
+        self.pin.write_analog(0)
+
+    def write_angle(self, degrees=None):
+        if degrees is None:
+            degrees = 0
+        degrees = degrees % 360
+        total_range = self.max_us - self.min_us
+        us = self.min_us + total_range * degrees // self.angle
+        self.write_us(us)
+
+
+
+def led():
+    lumiere = display.read_light_level()
+    print(lumiere)
+    if lumiere <5:
+        fermture_porte()
+
+        np = neopixel.NeoPixel(pin14, 4)
+        for pixel_id1 in range(0, len(np)):
+            np[pixel_id1] = (255, 255, 255)
+            np.show()
+        sleep(100)
+
+
+    else:
+
+        np = neopixel.NeoPixel(pin14, 4)
+        ouverture_porte()
+        for pixel_id1 in range(0, len(np)):
+            np[pixel_id1] = (0, 0, 0)
+            np.show()
+        sleep(100)
+
+
+
+
+
+
+def shake():
+    val1=Image("00900:""00900:""00900:""00000:""00900")
+    gesture= accelerometer.current_gesture()
+    if gesture=="shake":
+        ouverture_porte()
+        for i in range(10):
+            music.pitch(1000, 500)
+            music.pitch(600, 500)
+            display.show(val1)
+            sleep(200)
+            display.show(Image.TRIANGLE)
+
+def Temp():
+    Temp=temperature()
+    print(Temp)
+    if Temp>=35:
+        activation_ventilatteur()
+        ouverture_fenetre()
+
+def pluie():
+    pin16.write_digital(0)
+
+    while pin0.read_analog() > 770:
+        display.show("1")
+        music.play("C5:4")
+        pin16.write_digital(1)
+        sleep(100)
+        music.reset()
+        pin16.write_digital(0)
+        sleep(100)
+        music.play("C5:4")
+        pin16.write_digital(1)
+        sleep(100)
+        music.reset()
+        pin16.write_digital(0)
+        sleep(100)
+        Servo(pin8).write_angle(0)
+        Servo(pin9).write_angle(0)
+        fermture_porte()
+    else:
+        display.show("0")
+
+
+
+
+def detection_perssone():
+    lumiere = display.read_light_level()
+    pin16.write_digital(0)
+
+    if lumiere<5:
+        if pin15.read_digital()==1:
+            pin16.write_digital(1)
+            LL.puts("salut!")
+            sleep(1000)
+            LL.clear()
+
+    sleep(50)
+def activation_ventilatteur():
+    LL.puts("activation_ventilatteur!")
+    sleep(1000)
+    LL.clear()
+    pin12.write_digital(0)
+    pin13.write_digital(0)
+    pin12.write_digital(1)
+    pin13.write_digital(0)
+    sleep(5000)
+
+
+def gaz():
+    if pin1.read_digital()==1:
+        activation_ventilatteur()
+        ouverture_fenetre()
+        ouverture_porte()
+        for i in range(10):
+            music.pitch(1000, 500)
+            music.pitch(600, 500)
+            display.show(val1)
+            sleep(200)
+            display.show(Image.TRIANGLE)
+            LL.puts("Attention gaz!")
+            sleep(200)
+            LL.clear()
+
+def ouverture_porte():
+    Servo(pin9).write_angle(90)
+    LL.puts("ouverture_porte!")
+    sleep(1000)
+    LL.clear()
+
+def fermture_porte():
+    Servo(pin9).write_angle(0)
+    LL.puts("fermture_porte!")
+    sleep(1000)
+    LL.clear()
+
+def ouverture_fenetre():
+    Servo(pin8).write_angle(180)
+    LL.puts("ouverture_fenetre!")
+    sleep(1000)
+    LL.clear()
+
+def fermture_fenetre():
+    Servo(pin8).write_angle(0)
+    LL.puts("fermture_fenetre!")
+    sleep(1000)
+    LL.clear()
+LCD_I2C_ADDR = 0x27
+LL = LCD1602()
+
+LL.puts("Bonjour!")
+sleep(1000)
+LL.clear()
+lcd_etat=0
+
+while True:
+    nbr_affichage=1
+    shake()
+    led()
+    gaz()
+    detection_perssone()
+    pluie()
+    Temp()
+    if nbr_affichage ==3:
+        nbr_affichage=1
+    if nbr_affichage==1:
+        LL.clear()
+        LL.puts(str(temperature))
+        sleep(200)
+    if nbr_affichage==2:
+        LL.clear()
+        LL.puts("maison intelligent")
+        sleep(200)
+    nbr_affichage+=1
